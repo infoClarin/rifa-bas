@@ -340,7 +340,8 @@ async function reserve(){
     }])
 
   if(error){
-    alert('Número no disponible')
+    alert(error.message)
+console.log(error)
     return
   }
 
