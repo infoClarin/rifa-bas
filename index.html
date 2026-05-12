@@ -309,6 +309,35 @@ function selectNumber(number){
   selectedNumber=number
 
   document.getElementById('selected').value=number
+
+  // quitar selección previa
+  document
+    .querySelectorAll('.number')
+    .forEach(btn=>{
+      btn.style.transform=''
+      btn.style.boxShadow=''
+    })
+
+  // resaltar seleccionado
+  const buttons=document.querySelectorAll('.number')
+
+  buttons.forEach(btn=>{
+
+    if(parseInt(btn.innerText)===number){
+
+      btn.style.transform='scale(1.12)'
+
+      btn.style.boxShadow=
+        '0 0 0 4px rgba(37,99,235,.35)'
+    }
+  })
+
+  // scroll automático al formulario
+  document
+    .querySelector('.card')
+    .scrollIntoView({
+      behavior:'smooth'
+    })
 }
 
 async function reserve(){
