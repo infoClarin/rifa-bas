@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Admin - Rifa escolar 5to BAS</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f5f7fb;
+  color:#0f172a;
+}
+
+.container{
+  max-width:800px;
+  margin:auto;
+  padding:20px;
+}
+
+.login,
+.panel{
+  background:white;
+  border-radius:24px;
+  padding:30px;
+  box-shadow:0 10px 30px rgba(0,0,0,.06);
+  margin-top:40px;
+}
+
+h1{
+  text-align:center;
+  color:#082f8a;
+}
+
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:1px solid #cbd5e1;
+  margin-bottom:16px;
+  font-size:16px;
+  box-sizing:border-box;
+}
+
+button{
+  border:none;
+  border-radius:12px;
+  padding:14px 18px;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.login-btn{
+  width:100%;
+  background:#2563eb;
+  color:white;
+  font-weight:bold;
+}
+
+.reservation{
+  border:1px solid #e2e8f0;
+  border-radius:18px;
+  padding:20px;
+  margin-bottom:16px;
+  background:#fafafa;
+}
+
+.number{
+  font-size:32px;
+  font-weight:bold;
+  color:#082f8a;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top:16px;
+}
+
+.approve{
+  flex:1;
+  background:#22c55e;
+  color:white;
+  font-weight:bold;
+}
+
+.reject{
+  flex:1;
+  background:#ef4444;
+  color:white;
+  font-weight:bold;
+}
+
+.pending{
+  display:inline-block;
+  background:#fef9c3;
+  color:#854d0e;
+  padding:6px 10px;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+#panel{
+  display:none;
+}
+
+.empty{
+  text-align:center;
+  padding:30px;
+  color:#64748b;
+}
+
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="login" id="login">
+
+<h1>Administrador</h1>
+
+<input
+  type="password"
+  id="password"
+  placeholder="Contraseña"
+/>
+
+<button
+  class="login-btn"
+  onclick="login()"
+>
+Ingresar
+</button>
+
+</div>
+
+<div class="panel" id="panel">
+
+<h1>Reservas pendientes</h1>
+
+<div id="reservations"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const ADMIN_PASSWORD='Xy7VRelGQg.b'
+
+const SUPABASE_URL='https://uitbrhbqcpdkmnksohll.supabase.co'
+const SUPABASE_KEY='sb_publishable_gHJLZ-iv4M8NnHQA_pUqjg_rYMY6w7U'
+
+const supabaseClient=supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+)
+
+function login(){
+
+  const password=document
+    .getElementById('password')
+    .value
+
+  if(password!==ADMIN_PASSWORD){
+
+    alert('Contraseña incorrecta')
+
+    return
+  }
+
+  localStorage.setItem('admin_logged','true')
+
+  showPanel()
+}
+
+function showPanel(){
+
+  document.getElementById('login')
+    .style.display='none'
+
+  document.getElementById('panel')
+    .style.display='block'
+
+  loadReservations()
+}
+
+async function loadReservations(){
+
+  const {data}=await supabaseClient
+    .from('reservations')
+    .select('*')
+    .eq('status','pending')
+    .order('created_at',{
+      ascending:false
+    })
+
+  const container=document
+    .getElementById('reservations')
+
+  container.innerHTML=''
+
+  if(!data || data.length===0){
+
+    container.innerHTML=`
+      <div class="empty">
+        No hay reservas pendientes
+      </div>
+    `
+
+    return
+  }
+
+  data.forEach(item=>{
+
+    const div=document.createElement('div')
+
+    div.className='reservation'
+
+    div.innerHTML=`
+
+      <div class="number">
+        #${item.number}
+      </div>
+
+      <div class="pending">
+        Pendiente
+      </div>
+
+      <p>
+        <strong>Nombre:</strong>
+        ${item.name}
+      </p>
+
+      <p>
+        <strong>Teléfono:</strong>
+        ${item.phone}
+      </p>
+
+      <p>
+        <strong>Curso:</strong>
+        ${item.course || '-'}
+      </p>
+
+      <p>
+        <strong>E-mail:</strong>
+        ${item.email || '-'}
+      </p>
+
+      <div class="actions">
+
+        <button
+          class="approve"
+          onclick="approve(${item.id})"
+        >
+          Aprobar
+        </button>
+
+        <button
+          class="reject"
+          onclick="reject(${item.id})"
+        >
+          Rechazar
+        </button>
+
+      </div>
+    `
+
+    container.appendChild(div)
+  })
+}
+
+async function approve(id){
+
+  await supabaseClient
+    .from('reservations')
+    .update({
+      status:'reserved'
+    })
+    .eq('id',id)
+
+  loadReservations()
+}
+
+async function reject(id){
+
+  await supabaseClient
+    .from('reservations')
+    .delete()
+    .eq('id',id)
+
+  loadReservations()
+}
+
+if(
+  localStorage.getItem('admin_logged')
+  ==='true'
+){
+  showPanel()
+}
+
+supabaseClient
+.channel('admin-realtime')
+.on(
+  'postgres_changes',
+  {
+    event:'*',
+    schema:'public',
+    table:'reservations'
+  },
+  ()=>loadReservations()
+)
+.subscribe()
+
+</script>
+
+</body>
+</html>
